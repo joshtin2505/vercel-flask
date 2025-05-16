@@ -82,17 +82,48 @@ def metodo_trapecio():
             return jsonify({"error": "Falta la función"}), 400
         
         h = (b - a) / n
-        suma = evaluar_funcion(funcion, a, formato) + evaluar_funcion(funcion, b, formato)
         
-        # Calcular f(xi) para cada punto
+        # Crear tabla de iteración
+        tabla_iteracion = []
+        
+        # Agregar los extremos (a y b) a la tabla
+        fa = evaluar_funcion(funcion, a, formato)
+        fb = evaluar_funcion(funcion, b, formato)
+        
+        tabla_iteracion.append({
+            "i": 0,
+            "xi": a,
+            "f(xi)": fa,
+            "coeficiente": 1,
+            "f(xi) * coef": fa
+        })
+        
+        suma = fa
+        # Calcular f(xi) para cada punto intermedio
         for i in range(1, n):
             x = a + i * h
             valor = evaluar_funcion(funcion, x, formato)
-            if i == 0 or i == n:
-                suma += valor
-            else:
-                suma += 2 * valor
+            coef = 2  # En el método del trapecio, todos los puntos intermedios tienen coeficiente 2
+            suma += coef * valor
+            
+            tabla_iteracion.append({
+                "i": i,
+                "xi": x,
+                "f(xi)": valor,
+                "coeficiente": coef,
+                "f(xi) * coef": coef * valor
+            })
         
+        # Agregar el punto final a la tabla
+        tabla_iteracion.append({
+            "i": n,
+            "xi": b,
+            "f(xi)": fb,
+            "coeficiente": 1,
+            "f(xi) * coef": fb
+        })
+        
+        suma += fb
         integral = (h/2) * suma
         
         return jsonify({
@@ -102,7 +133,10 @@ def metodo_trapecio():
             "formato": formato,
             "a": a,
             "b": b,
-            "n": n
+            "n": n,
+            "h": h,
+            "tabla_iteracion": tabla_iteracion,
+            "formula": "(h/2) * [f(a) + 2*f(x1) + 2*f(x2) + ... + 2*f(xn-1) + f(b)]"
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -130,8 +164,13 @@ def metodo_boole():
         h = (b - a) / n
         suma = 0
         
+        # Crear tabla de iteración
+        tabla_iteracion = []
+        
         # Aplicar fórmula de Boole: (2h/45)[7f(x₀) + 32f(x₁) + 12f(x₂) + 32f(x₃) + 7f(x₄)]
         # Para múltiples segmentos
+        segmentos_tabla = []
+        
         for j in range(0, n, 4):
             x0 = a + j * h
             x1 = a + (j + 1) * h
@@ -145,8 +184,60 @@ def metodo_boole():
             f3 = evaluar_funcion(funcion, x3, formato)
             f4 = evaluar_funcion(funcion, x4, formato)
             
+            # Agregar puntos a la tabla de iteración
+            tabla_iteracion.append({
+                "segmento": j // 4 + 1,
+                "punto": "x0",
+                "x": x0,
+                "f(x)": f0,
+                "coeficiente": 7,
+                "f(x) * coef": 7 * f0
+            })
+            
+            tabla_iteracion.append({
+                "segmento": j // 4 + 1,
+                "punto": "x1",
+                "x": x1,
+                "f(x)": f1,
+                "coeficiente": 32,
+                "f(x) * coef": 32 * f1
+            })
+            
+            tabla_iteracion.append({
+                "segmento": j // 4 + 1,
+                "punto": "x2",
+                "x": x2,
+                "f(x)": f2,
+                "coeficiente": 12,
+                "f(x) * coef": 12 * f2
+            })
+            
+            tabla_iteracion.append({
+                "segmento": j // 4 + 1,
+                "punto": "x3",
+                "x": x3,
+                "f(x)": f3,
+                "coeficiente": 32,
+                "f(x) * coef": 32 * f3
+            })
+            
+            tabla_iteracion.append({
+                "segmento": j // 4 + 1,
+                "punto": "x4",
+                "x": x4,
+                "f(x)": f4,
+                "coeficiente": 7,
+                "f(x) * coef": 7 * f4
+            })
+            
             segmento = (2*h/45) * (7*f0 + 32*f1 + 12*f2 + 32*f3 + 7*f4)
             suma += segmento
+            
+            segmentos_tabla.append({
+                "segmento": j // 4 + 1,
+                "intervalo": [x0, x4],
+                "valor": segmento
+            })
         
         return jsonify({
             "resultado": suma,
@@ -155,7 +246,11 @@ def metodo_boole():
             "formato": formato,
             "a": a,
             "b": b,
-            "n": n
+            "n": n,
+            "h": h,
+            "tabla_iteracion": tabla_iteracion,
+            "segmentos": segmentos_tabla,
+            "formula": "(2h/45)[7f(x₀) + 32f(x₁) + 12f(x₂) + 32f(x₃) + 7f(x₄)]"
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -181,24 +276,82 @@ def metodo_simpson38():
                 n = 3
         
         h = (b - a) / n
-        suma = evaluar_funcion(funcion, a, formato) + evaluar_funcion(funcion, b, formato)
         
-        # Sumar términos con coeficientes 3
+        # Crear tabla de iteración
+        tabla_iteracion = []
+        
+        # Evaluar el extremo a
+        fa = evaluar_funcion(funcion, a, formato)
+        tabla_iteracion.append({
+            "i": 0,
+            "xi": a,
+            "f(xi)": fa,
+            "coeficiente": 1,
+            "f(xi) * coef": fa
+        })
+        
+        suma = fa
+        
+        # Sumar términos con coeficientes 3 (puntos con índice 1, 4, 7, ...)
         for i in range(1, n, 3):
             x = a + i * h
-            suma += 3 * evaluar_funcion(funcion, x, formato)
+            valor = evaluar_funcion(funcion, x, formato)
+            coef = 3
+            suma += coef * valor
+            
+            tabla_iteracion.append({
+                "i": i,
+                "xi": x,
+                "f(xi)": valor,
+                "coeficiente": coef,
+                "f(xi) * coef": coef * valor
+            })
         
-        # Sumar términos con coeficientes 3
+        # Sumar términos con coeficientes 3 (puntos con índice 2, 5, 8, ...)
         for i in range(2, n, 3):
             x = a + i * h
-            suma += 3 * evaluar_funcion(funcion, x, formato)
+            valor = evaluar_funcion(funcion, x, formato)
+            coef = 3
+            suma += coef * valor
+            
+            tabla_iteracion.append({
+                "i": i,
+                "xi": x,
+                "f(xi)": valor,
+                "coeficiente": coef,
+                "f(xi) * coef": coef * valor
+            })
         
-        # Sumar términos con coeficientes 2
+        # Sumar términos con coeficientes 2 (puntos con índice 3, 6, 9, ...)
         for i in range(3, n, 3):
             x = a + i * h
-            suma += 2 * evaluar_funcion(funcion, x, formato)
+            valor = evaluar_funcion(funcion, x, formato)
+            coef = 2
+            suma += coef * valor
+            
+            tabla_iteracion.append({
+                "i": i,
+                "xi": x,
+                "f(xi)": valor,
+                "coeficiente": coef,
+                "f(xi) * coef": coef * valor
+            })
         
+        # Evaluar el extremo b
+        fb = evaluar_funcion(funcion, b, formato)
+        tabla_iteracion.append({
+            "i": n,
+            "xi": b,
+            "f(xi)": fb,
+            "coeficiente": 1,
+            "f(xi) * coef": fb
+        })
+        
+        suma += fb
         integral = (3*h/8) * suma
+        
+        # Ordenar tabla por el índice i
+        tabla_iteracion.sort(key=lambda x: x["i"])
         
         return jsonify({
             "resultado": integral,
@@ -207,7 +360,10 @@ def metodo_simpson38():
             "formato": formato,
             "a": a,
             "b": b,
-            "n": n
+            "n": n,
+            "h": h,
+            "tabla_iteracion": tabla_iteracion,
+            "formula": "(3h/8) * [f(x0) + 3f(x1) + 3f(x2) + 2f(x3) + 3f(x4) + ... + f(xn)]"
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -231,19 +387,67 @@ def metodo_simpson13():
             n += 1
         
         h = (b - a) / n
-        suma = evaluar_funcion(funcion, a, formato) + evaluar_funcion(funcion, b, formato)
+        
+        # Crear tabla de iteración
+        tabla_iteracion = []
+        
+        # Evaluar el extremo a
+        fa = evaluar_funcion(funcion, a, formato)
+        tabla_iteracion.append({
+            "i": 0,
+            "xi": a,
+            "f(xi)": fa,
+            "coeficiente": 1,
+            "f(xi) * coef": fa
+        })
+        
+        suma = fa
         
         # Sumar términos con coeficientes 4 (impares)
         for i in range(1, n, 2):
             x = a + i * h
-            suma += 4 * evaluar_funcion(funcion, x, formato)
+            valor = evaluar_funcion(funcion, x, formato)
+            coef = 4
+            suma += coef * valor
+            
+            tabla_iteracion.append({
+                "i": i,
+                "xi": x,
+                "f(xi)": valor,
+                "coeficiente": coef,
+                "f(xi) * coef": coef * valor
+            })
         
         # Sumar términos con coeficientes 2 (pares)
         for i in range(2, n, 2):
             x = a + i * h
-            suma += 2 * evaluar_funcion(funcion, x, formato)
+            valor = evaluar_funcion(funcion, x, formato)
+            coef = 2
+            suma += coef * valor
+            
+            tabla_iteracion.append({
+                "i": i,
+                "xi": x,
+                "f(xi)": valor,
+                "coeficiente": coef,
+                "f(xi) * coef": coef * valor
+            })
         
+        # Evaluar el extremo b
+        fb = evaluar_funcion(funcion, b, formato)
+        tabla_iteracion.append({
+            "i": n,
+            "xi": b,
+            "f(xi)": fb,
+            "coeficiente": 1,
+            "f(xi) * coef": fb
+        })
+        
+        suma += fb
         integral = (h/3) * suma
+        
+        # Ordenar tabla por el índice i
+        tabla_iteracion.sort(key=lambda x: x["i"])
         
         return jsonify({
             "resultado": integral,
@@ -252,7 +456,10 @@ def metodo_simpson13():
             "formato": formato,
             "a": a,
             "b": b,
-            "n": n
+            "n": n,
+            "h": h,
+            "tabla_iteracion": tabla_iteracion,
+            "formula": "(h/3) * [f(x0) + 4f(x1) + 2f(x2) + 4f(x3) + ... + f(xn)]"
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -275,14 +482,49 @@ def metodo_simpson_abierto():
         h = (b - a) / (n + 2)  # n+2 subintervalos porque no evaluamos en extremos
         suma = 0
         
+        # Crear tabla de iteración
+        tabla_iteracion = []
+        
+        # Nota: En Simpson abierto, los puntos extremos a y b no se evalúan
+        tabla_iteracion.append({
+            "i": 0,
+            "xi": a,
+            "f(xi)": "No evaluado",
+            "coeficiente": "N/A",
+            "f(xi) * coef": "N/A",
+            "nota": "Punto extremo no evaluado en Simpson Abierto"
+        })
+        
         # Evaluar en puntos internos solamente
         for i in range(1, n+1):
             x = a + i * h
+            valor = evaluar_funcion(funcion, x, formato)
+            
             # Aplicar pesos según la posición
             if i % 2 == 1:  # Posiciones impares
-                suma += 2 * evaluar_funcion(funcion, x, formato)
+                coef = 2
+                suma += coef * valor
             else:  # Posiciones pares
-                suma += evaluar_funcion(funcion, x, formato)
+                coef = 1
+                suma += coef * valor
+            
+            tabla_iteracion.append({
+                "i": i,
+                "xi": x,
+                "f(xi)": valor,
+                "coeficiente": coef,
+                "f(xi) * coef": coef * valor
+            })
+        
+        # Agregar el punto final a la tabla (no evaluado)
+        tabla_iteracion.append({
+            "i": n+1,
+            "xi": b,
+            "f(xi)": "No evaluado",
+            "coeficiente": "N/A",
+            "f(xi) * coef": "N/A",
+            "nota": "Punto extremo no evaluado en Simpson Abierto"
+        })
         
         integral = (3*h) * suma
         
@@ -293,7 +535,11 @@ def metodo_simpson_abierto():
             "formato": formato,
             "a": a,
             "b": b,
-            "n": n
+            "n": n,
+            "h": h,
+            "tabla_iteracion": tabla_iteracion,
+            "formula": "(3h) * [2f(x₁) + f(x₂) + 2f(x₃) + ... ]",
+            "nota": "En Simpson Abierto no se evalúan los extremos del intervalo"
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -308,35 +554,40 @@ def obtener_metodos():
                 "endpoint": "/trapecio",
                 "descripcion": "Método del Trapecio para integración numérica",
                 "formula": "I = (h/2)[f(x₀) + 2f(x₁) + 2f(x₂) + ... + 2f(xₙ₋₁) + f(xₙ)]",
-                "formato_soportado": ["python", "latex"]
+                "formato_soportado": ["python", "latex"],
+                "tabla_iteracion": "Incluye detalles de cada punto evaluado con índice, valor de x, f(x), coeficiente aplicado y producto"
             },
             {
                 "nombre": "Jorge Boole",
                 "endpoint": "/boole",
                 "descripcion": "Método de Jorge Boole para integración numérica",
                 "formula": "I = (2h/45)[7f(x₀) + 32f(x₁) + 12f(x₂) + 32f(x₃) + 7f(x₄)]",
-                "formato_soportado": ["python", "latex"]
+                "formato_soportado": ["python", "latex"],
+                "tabla_iteracion": "Incluye detalles de cada punto evaluado organizados por segmentos, con información sobre los coeficientes (7,32,12,32,7)"
             },
             {
                 "nombre": "Simpson 3/8",
                 "endpoint": "/simpson38",
                 "descripcion": "Método de Simpson 3/8 para integración numérica",
                 "formula": "I = (3h/8)[f(x₀) + 3f(x₁) + 3f(x₂) + 2f(x₃) + ... + f(xₙ)]",
-                "formato_soportado": ["python", "latex"]
+                "formato_soportado": ["python", "latex"],
+                "tabla_iteracion": "Incluye detalles de cada punto con sus respectivos coeficientes (1,3,3,2,...)"
             },
             {
                 "nombre": "Simpson 1/3",
                 "endpoint": "/simpson13",
                 "descripcion": "Método de Simpson 1/3 para integración numérica",
                 "formula": "I = (h/3)[f(x₀) + 4f(x₁) + 2f(x₂) + 4f(x₃) + ... + f(xₙ)]",
-                "formato_soportado": ["python", "latex"]
+                "formato_soportado": ["python", "latex"],
+                "tabla_iteracion": "Incluye detalles de cada punto con sus respectivos coeficientes (1,4,2,4,...)"
             },
             {
                 "nombre": "Simpson Abierto",
                 "endpoint": "/simpson_abierto",
                 "descripcion": "Método de Simpson Abierto para integración numérica",
                 "formula": "I = 3h[f(x₁) + 2f(x₂) + f(x₃) + 2f(x₄) + ... ]",
-                "formato_soportado": ["python", "latex"]
+                "formato_soportado": ["python", "latex"],
+                "tabla_iteracion": "Incluye detalles de los puntos internos evaluados (los extremos no se evalúan en este método)"
             }
         ],
         "formatos": {
@@ -349,6 +600,18 @@ def obtener_metodos():
             "a": 0,
             "b": 3.14,
             "n": 100
+        },
+        "respuesta_incluye": {
+            "resultado": "Valor numérico de la integral",
+            "metodo": "Nombre del método utilizado",
+            "funcion": "Función evaluada",
+            "formato": "Formato de la función (python o latex)",
+            "a": "Límite inferior",
+            "b": "Límite superior",
+            "n": "Número de subintervalos",
+            "h": "Tamaño del paso",
+            "tabla_iteracion": "Tabla con los detalles de cada punto evaluado durante el cálculo",
+            "formula": "Fórmula matemática aplicada"
         }
     })
 
