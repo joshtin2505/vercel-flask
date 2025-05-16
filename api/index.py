@@ -5,9 +5,16 @@ import re
 from sympy.parsing.latex import parse_latex
 from sympy import symbols
 from sympy.utilities.lambdify import lambdify
+# Configuración para permitir consultas de cualquier origen (CORS)
 
 app = Flask(__name__)
 
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
+    return response
 @app.route('/')
 def home():
     return 'API de Métodos Numéricos para Integración'

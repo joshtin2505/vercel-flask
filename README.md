@@ -3,7 +3,7 @@
 Esta API permite calcular integrales definidas de funciones matemáticas utilizando diferentes métodos numéricos. Soporta funciones en formato Python y LaTeX.
 
 ## Requisitos
-- Python 3.8+
+- Python 3.10+
 - pip
 
 ## Instalación y ejecución local
@@ -45,6 +45,17 @@ La API estará disponible en: [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
 
 ## Documentación de Endpoints
 
+### Parámetro 'n' en los métodos numéricos
+El parámetro `n` representa el número de subintervalos o divisiones utilizadas en los cálculos. Un valor mayor de `n` generalmente proporciona una aproximación más precisa de la integral, pero requiere más cálculos.
+
+Cada método tiene diferentes valores predeterminados y restricciones para `n`:
+- **Método del Trapecio**: n=10 por defecto, sin restricciones específicas
+- **Método de Jorge Boole**: n=4 por defecto, debe ser múltiplo de 4 (se ajusta automáticamente)
+- **Método de Simpson 3/8**: n=3 por defecto, debe ser múltiplo de 3 (se ajusta automáticamente)
+- **Método de Simpson 1/3**: debe ser par (se ajusta automáticamente)
+- **Método de Simpson Abierto**: valor predeterminado de n=4
+
+
 ### 1. Home
 - **GET /**
 - **Descripción:** Mensaje de bienvenida de la API.
@@ -70,21 +81,78 @@ La API estará disponible en: [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
     "n": 10
   }
   ```
+- **Parámetros:**
+  - `funcion`: Expresión matemática a integrar
+  - `formato`: Formato de la función (python o latex)
+  - `a`: Límite inferior de integración
+  - `b`: Límite superior de integración
+  - `n`: Número de subintervalos (valor predeterminado: 10)
 - **Respuesta:** Resultado de la integral y parámetros usados.
 
 ### 4. Método de Jorge Boole
 - **POST /boole**
-- **Body (JSON):** Igual que el anterior, pero `n` debe ser múltiplo de 4.
+- **Body (JSON):**
+  ```json
+  {
+    "funcion": "x^2 + 2*x + 1",
+    "formato": "python" | "latex",
+    "a": 0,
+    "b": 1,
+    "n": 4
+  }
+  ```
+- **Parámetros:**
+  - `funcion`: Expresión matemática a integrar
+  - `formato`: Formato de la función (python o latex)
+  - `a`: Límite inferior de integración
+  - `b`: Límite superior de integración
+  - `n`: Número de subintervalos (valor predeterminado: 4, debe ser múltiplo de 4)
+  
+  **Nota:** Si `n` no es múltiplo de 4, el método ajustará automáticamente este valor.
 - **Respuesta:** Resultado de la integral y parámetros usados.
 
 ### 5. Método de Simpson 3/8
 - **POST /simpson38**
-- **Body (JSON):** Igual que el anterior, pero `n` debe ser múltiplo de 3.
+- **Body (JSON):**
+  ```json
+  {
+    "funcion": "x^2 + 2*x + 1",
+    "formato": "python" | "latex",
+    "a": 0,
+    "b": 1,
+    "n": 3
+  }
+  ```
+- **Parámetros:**
+  - `funcion`: Expresión matemática a integrar
+  - `formato`: Formato de la función (python o latex)
+  - `a`: Límite inferior de integración
+  - `b`: Límite superior de integración
+  - `n`: Número de subintervalos (valor predeterminado: 3, debe ser múltiplo de 3)
+  
+  **Nota:** Si `n` no es múltiplo de 3, el método ajustará automáticamente este valor.
 - **Respuesta:** Resultado de la integral y parámetros usados.
 
 ### 6. Método de Simpson 1/3
 - **POST /simpson13**
-- **Body (JSON):** Igual que el anterior, pero `n` debe ser par.
+- **Body (JSON):**
+  ```json
+  {
+    "funcion": "x^2 + 2*x + 1",
+    "formato": "python" | "latex",
+    "a": 0,
+    "b": 1,
+    "n": 2
+  }
+  ```
+- **Parámetros:**
+  - `funcion`: Expresión matemática a integrar
+  - `formato`: Formato de la función (python o latex)
+  - `a`: Límite inferior de integración
+  - `b`: Límite superior de integración
+  - `n`: Número de subintervalos (debe ser par)
+  
+  **Nota:** Si `n` no es par, el método ajustará automáticamente este valor.
 - **Respuesta:** Resultado de la integral y parámetros usados.
 
 ### 7. Método de Simpson Abierto
@@ -99,6 +167,12 @@ La API estará disponible en: [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
     "n": 4
   }
   ```
+- **Parámetros:**
+  - `funcion`: Expresión matemática a integrar
+  - `formato`: Formato de la función (python o latex)
+  - `a`: Límite inferior de integración
+  - `b`: Límite superior de integración
+  - `n`: Número de subintervalos (valor predeterminado: 4)
 - **Respuesta:** Resultado de la integral y parámetros usados.
 
 ---
