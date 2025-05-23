@@ -469,81 +469,56 @@ def metodo_simpson13():
 def metodo_simpson_abierto():
     try:
         data = request.get_json()
+        if data is None:
+            return jsonify({"error": "No se recibieron datos JSON válidos"}), 400
+
         funcion = data.get('funcion')
-        formato = data.get('formato', 'python')  # Por defecto 'python', también acepta 'latex'
-        a = float(data.get('a'))  # Límite inferior
-        b = float(data.get('b'))  # Límite superior
-        n = int(data.get('n', 2))  # Número de puntos internos (par)
-        
         if not funcion:
-            return jsonify({"error": "Falta la función"}), 400
-        
-        # En Simpson abierto no se evalúa en los extremos
-        h = (b - a) / (n + 2)  # n+2 subintervalos porque no evaluamos en extremos
-        suma = 0
-        
-        # Crear tabla de iteración
-        tabla_iteracion = []
-        
-        # Nota: En Simpson abierto, los puntos extremos a y b no se evalúan
-        tabla_iteracion.append({
-            "i": 0,
-            "xi": a,
-            "f(xi)": "No evaluado",
-            "coeficiente": "N/A",
-            "f(xi) * coef": "N/A",
-            "nota": "Punto extremo no evaluado en Simpson Abierto"
-        })
-        
-        # Evaluar en puntos internos solamente
-        for i in range(1, n+1):
-            x = a + i * h
-            valor = evaluar_funcion(funcion, x, formato)
-            
-            # Aplicar pesos según la posición
-            if i % 2 == 1:  # Posiciones impares
-                coef = 2
-                suma += coef * valor
-            else:  # Posiciones pares
-                coef = 1
-                suma += coef * valor
-            
-            tabla_iteracion.append({
-                "i": i,
-                "xi": x,
-                "f(xi)": valor,
-                "coeficiente": coef,
-                "f(xi) * coef": coef * valor
-            })
-        
-        # Agregar el punto final a la tabla (no evaluado)
-        tabla_iteracion.append({
-            "i": n+1,
-            "xi": b,
-            "f(xi)": "No evaluado",
-            "coeficiente": "N/A",
-            "f(xi) * coef": "N/A",
-            "nota": "Punto extremo no evaluado en Simpson Abierto"
-        })
-        
-        integral = (3*h) * suma
-        
+            return jsonify({"error": "Falta el parámetro 'funcion'"}), 400
+
+        formato = data.get('formato', 'python')
+        try:
+            a = float(data.get('a'))
+            b = float(data.get('b'))
+        except (ValueError, TypeError):
+            return jsonify({"error": "Los parámetros 'a' y 'b' deben ser números"}), 400
+
+        # ---- CÁLCULO DE SIMPSON ABIERTO 1/3 ----
+        h = (b - a) / 4.0
+
+        # Puntos internos
+        x1 = a + h
+        x2 = a + 2*h
+        x3 = a + 3*h
+
+        # Evaluación de la función
+        f1 = evaluar_funcion(funcion, x1, formato)
+        f2 = evaluar_funcion(funcion, x2, formato)
+        f3 = evaluar_funcion(funcion, x3, formato)
+
+        # Fórmula de Simpson abierto
+        integral = (4*h/3) * (2*f1 - f2 + 2*f3)
+
+        # Tabla de iteración (opcional, muestra solo 3 puntos)
+        tabla_iteracion = [
+            {"i": 1, "xi": x1, "f(xi)": f1},
+            {"i": 2, "xi": x2, "f(xi)": f2},
+            {"i": 3, "xi": x3, "f(xi)": f3},
+        ]
+
         return jsonify({
             "resultado": integral,
-            "metodo": "Simpson Abierto",
+            "metodo": "Simpson Abierto 1/3",
             "funcion": funcion,
             "formato": formato,
             "a": a,
             "b": b,
-            "n": n,
             "h": h,
             "tabla_iteracion": tabla_iteracion,
-            "formula": "(3h) * [2f(x₁) + f(x₂) + 2f(x₃) + ... ]",
-            "nota": "En Simpson Abierto no se evalúan los extremos del intervalo"
+            "formula": "(4h/3) [2f(x₁) - f(x₂) + 2f(x₃)]",
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
 # Endpoint para obtener información de los métodos disponibles
 @app.route('/metodos', methods=['GET'])
 def obtener_metodos():
